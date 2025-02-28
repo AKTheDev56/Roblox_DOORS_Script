@@ -3,10 +3,11 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 
 local colourTable = {
-    Red = Color3.fromRGB(0, 255, 0),
-    Yellow = Color3.fromRGB(241, 196, 15)
+    Red = Color3.fromRGB(255, 0, 0),
+    Yellow = Color3.fromRGB(241, 196, 15),
+    Green = Color3.fromRGB(0, 255, 0) -- Defined Green here
 }
-local colourChosen = colourTable.Green
+local colourChosen = colourTable.Green -- Corrected to use Green
 local doorHighlightColor = colourTable.Yellow
 
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
