@@ -6,7 +6,7 @@ local colourTable = {
     Red = Color3.fromRGB(0, 255, 0),
     Yellow = Color3.fromRGB(241, 196, 15)
 }
-local colourChosen = colourTable.Red
+local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
