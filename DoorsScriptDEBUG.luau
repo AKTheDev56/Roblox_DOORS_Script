@@ -42,11 +42,23 @@ local function addHighlight(instance, color)
     end
 end
 
-local function updateHighlights()
+local function cleanupHighlights()
     for instance, highlight in pairs(highlightedCache) do
         if not instance:IsDescendantOf(Workspace) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
+        end
+    end
+end
+
+local function highlightPartsAndModels()
+    for _, child in ipairs(Workspace:GetDescendants()) do
+        -- Highlight mesh parts like Key, Inset, Ring, and Tag
+        if child:IsA("MeshPart") and highlightParts[child.Name] then
+            addHighlight(child, colourChosen)
+        -- Highlight specific models like LeverForGate, LiveHintBook, and FigureRig
+        elseif child:IsA("Model") and highlightModels[child.Name] then
+            addHighlight(child, colourChosen)
         end
     end
 end
@@ -95,44 +107,26 @@ local function highlightDoors()
     end
 end
 
-local function highlightPartsAndModels()
-    for _, child in ipairs(Workspace:GetDescendants()) do
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            addHighlight(child, colourChosen)
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
-        end
-    end
-end
-
-local function sendNotification(title, text)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = 5
-    })
-end
-
 local function setupWorkspaceListeners()
     Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
-                sendNotification("RUSH", "HIDE")
+                StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
             elseif child.Name == "AmbushMoving" then
-                sendNotification("AMBUSH", "HIDE")
+                StarterGui:SetCore("SendNotification", { Title = "AMBUSH", Text = "HIDE", Duration = 5 })
             elseif child.Name == "Eyes" then
-                sendNotification("EYES", "LOOK AWAY")
+                StarterGui:SetCore("SendNotification", { Title = "EYES", Text = "LOOK AWAY", Duration = 5 })
             end
         end
     end)
 end
 
 RunService.Heartbeat:Connect(function()
-    updateHighlights() -- Clean up invalid highlights
+    cleanupHighlights() -- Clean up invalid highlights
+    highlightPartsAndModels() -- Highlight specific mesh parts and models dynamically
     highlightDoors() -- Highlight doors and update their distances
-    highlightPartsAndModels() -- Highlight specific parts and models
 end)
 
 setupWorkspaceListeners()
-highlightDoors()
 highlightPartsAndModels()
+highlightDoors()
