@@ -52,6 +52,7 @@ local function cleanupHighlights()
 end
 
 local function highlightPartsAndModels()
+    -- Iterate through Workspace descendants in real-time
     for _, child in ipairs(Workspace:GetDescendants()) do
         -- Highlight mesh parts like Key, Inset, Ring, and Tag
         if child:IsA("MeshPart") and highlightParts[child.Name] then
