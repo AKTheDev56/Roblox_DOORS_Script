@@ -65,9 +65,9 @@ end
 local function cacheStaticParts()
     staticPartsCache = {} -- Clear previous cache
     for _, child in ipairs(Workspace:GetDescendants()) do
-        -- Cache both mesh parts and models that match the highlightParts or highlightModels tables
+        -- Cache both mesh parts and models
         if child:IsA("MeshPart") and highlightParts[child.Name] then
-            table.insert(staticPartsCache, child)
+            table.insert(staticPartsCache, child) -- Ensure Key, Inset, Ring, Tag are included
         elseif child:IsA("Model") and highlightModels[child.Name] then
             table.insert(staticPartsCache, child)
         end
@@ -76,57 +76,55 @@ end
 
 local function findAndHighlightInstances()
     for _, part in ipairs(staticPartsCache) do
-        addHighlight(part, colourChosen)
+        addHighlight(part, colourChosen) -- Apply highlighting to all cached parts
     end
 end
 
 local function highlightDoors()
-    -- Get the player's primary part
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    -- Access Workspace.CurrentRooms to locate doors
     local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
     if not currentRoomsFolder then return end
 
     for _, room in ipairs(currentRoomsFolder:GetChildren()) do
         if room:IsA("Model") and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
             local door = room.Door.Door
-            -- Add a Highlight if it doesn't already exist
+
+            -- Always ensure a Highlight exists for the door
             if not highlightedCache[door] then
-                local hg = Instance.new("Highlight", door)
-                hg.FillColor = Color3.fromRGB(241, 196, 15)
-                hg.FillTransparency = 0.5
-                highlightedCache[door] = hg
+                addHighlight(door, doorHighlightColor)
 
                 -- Add a BillboardGui for distance labeling
-                local bb = Instance.new("BillboardGui", door)
-                bb.Adornee = door
-                bb.ExtentsOffset = Vector3.new(0, 1, 0)
-                bb.AlwaysOnTop = true
-                bb.Size = UDim2.new(0, 6, 0, 6)
-                bb.StudsOffset = Vector3.new(0, 1, 0)
-                bb.Name = "BillBoard"
+                if not door:FindFirstChild("BillBoard") then
+                    local bb = Instance.new("BillboardGui", door)
+                    bb.Adornee = door
+                    bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Size = UDim2.new(0, 6, 0, 6)
+                    bb.StudsOffset = Vector3.new(0, 1, 0)
+                    bb.Name = "BillBoard"
 
-                local txtlbl = Instance.new("TextLabel", bb)
-                txtlbl.ZIndex = 10
-                txtlbl.BackgroundTransparency = 1
-                txtlbl.Position = UDim2.new(0, 0, 0, -45)
-                txtlbl.Size = UDim2.new(1, 0, 10, 0)
-                txtlbl.Font = Enum.Font.ArialBold
-                txtlbl.Text = "Door " .. room.Name
-                txtlbl.TextStrokeTransparency = 0.5
-                txtlbl.TextColor3 = Color3.fromRGB(241, 196, 15)
+                    local txtlbl = Instance.new("TextLabel", bb)
+                    txtlbl.ZIndex = 10
+                    txtlbl.BackgroundTransparency = 1
+                    txtlbl.Position = UDim2.new(0, 0, 0, -45)
+                    txtlbl.Size = UDim2.new(1, 0, 10, 0)
+                    txtlbl.Font = Enum.Font.ArialBold
+                    txtlbl.Text = "Door " .. room.Name
+                    txtlbl.TextStrokeTransparency = 0.5
+                    txtlbl.TextColor3 = doorHighlightColor
 
-                local txtlbl2 = Instance.new("TextLabel", bb)
-                txtlbl2.ZIndex = 10
-                txtlbl2.BackgroundTransparency = 1
-                txtlbl2.Position = UDim2.new(0, 0, 0, -15)
-                txtlbl2.Size = UDim2.new(1, 0, 10, 0)
-                txtlbl2.Font = Enum.Font.ArialBold
-                txtlbl2.TextStrokeTransparency = 0.5
-                txtlbl2.TextColor3 = Color3.fromRGB(241, 196, 15)
-                txtlbl2.Name = "Dist"
+                    local txtlbl2 = Instance.new("TextLabel", bb)
+                    txtlbl2.ZIndex = 10
+                    txtlbl2.BackgroundTransparency = 1
+                    txtlbl2.Position = UDim2.new(0, 0, 0, -15)
+                    txtlbl2.Size = UDim2.new(1, 0, 10, 0)
+                    txtlbl2.Font = Enum.Font.ArialBold
+                    txtlbl2.TextStrokeTransparency = 0.5
+                    txtlbl2.TextColor3 = doorHighlightColor
+                    txtlbl2.Name = "Dist"
+                end
             end
 
             -- Update distance label dynamically
@@ -155,9 +153,9 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
-    cacheStaticParts() -- Ensure cache is updated for mesh parts and models
-    findAndHighlightInstances() -- Highlight both mesh parts and specific models
-    highlightDoors() -- Highlight doors
+    cacheStaticParts() -- Update the cache with Key, Inset, Ring, and Tag
+    findAndHighlightInstances() -- Highlight mesh parts
+    highlightDoors() -- Ensure doors are highlighted with text and distance
 end)
 
 setupWorkspaceListeners()
