@@ -23,6 +23,11 @@ local function getPlayerPrimaryPart()
     return character and character.PrimaryPart
 end
 
+local function round(number, decimals)
+    local power = 10 ^ decimals
+    return math.floor(number * power) / power
+end
+
 local function addHighlight(instance, color)
     if not highlightedCache[instance] then
         local highlight = Instance.new("Highlight")
@@ -57,28 +62,12 @@ local function sendNotification(title, text)
     })
 end
 
-local function cacheStaticParts()
-    staticPartsCache = {} -- Clear previous cache
-    for _, child in ipairs(Workspace:GetDescendants()) do
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            table.insert(staticPartsCache, child)
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            table.insert(staticPartsCache, child)
-        end
-    end
-end
-
-local function findAndHighlightInstances()
-    for _, part in ipairs(staticPartsCache) do
-        addHighlight(part, colourChosen)
-    end
-end
-
 local function highlightDoors()
     
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
+    -- Access Workspace.CurrentRooms to locate doors
     local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
     if not currentRoomsFolder then return end
 
@@ -92,7 +81,6 @@ local function highlightDoors()
                 hg.FillTransparency = 0.5
                 highlightedCache[door] = hg
 
-                -- Add a BillboardGui for distance labeling
                 local bb = Instance.new("BillboardGui", door)
                 bb.Adornee = door
                 bb.ExtentsOffset = Vector3.new(0, 1, 0)
@@ -122,7 +110,6 @@ local function highlightDoors()
                 txtlbl2.Name = "Dist"
             end
 
-            -- Update distance label dynamically
             local bb = door:FindFirstChild("BillBoard")
             local distLabel = bb and bb:FindFirstChild("Dist")
             if distLabel then
@@ -133,8 +120,6 @@ local function highlightDoors()
 end
 
 local function setupWorkspaceListeners()
-    cacheStaticParts()
-
     Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
@@ -145,25 +130,13 @@ local function setupWorkspaceListeners()
                 sendNotification("EYES", "LOOK AWAY")
             end
         end
-        
-        cacheStaticParts()
-        findAndHighlightInstances()
-    end)
-
-    Workspace.DescendantRemoving:Connect(function(instance)
-        highlightedCache[instance] = nil
-        
-        cacheStaticParts()
     end)
 end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
-    findAndHighlightInstances()
     highlightDoors()
 end)
 
 setupWorkspaceListeners()
-cacheStaticParts()
-findAndHighlightInstances()
 highlightDoors()
