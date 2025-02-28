@@ -62,9 +62,9 @@ local function sendNotification(title, text)
     })
 end
 
-local function cacheStaticParts(folder)
+local function cacheStaticParts()
     staticPartsCache = {} -- Clear previous cache
-    for _, child in ipairs(folder:GetDescendants()) do
+    for _, child in ipairs(Workspace:GetDescendants()) do
         if child:IsA("MeshPart") and highlightParts[child.Name] then
             table.insert(staticPartsCache, child)
         elseif child:IsA("Model") and highlightModels[child.Name] then
@@ -136,8 +136,10 @@ local function highlightFigureRig()
     addHighlight(figureRig, colourChosen)
 end
 
-local function setupWorkspaceListeners(workspace)
-    workspace.ChildAdded:Connect(function(child)
+local function setupWorkspaceListeners()
+    cacheStaticParts() -- Cache static parts initially
+
+    Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
                 sendNotification("RUSH", "HIDE")
@@ -147,6 +149,14 @@ local function setupWorkspaceListeners(workspace)
                 sendNotification("EYES", "LOOK AWAY")
             end
         end
+        -- Update the cache when a new child is added
+        cacheStaticParts()
+    end)
+
+    Workspace.DescendantRemoving:Connect(function(instance)
+        highlightedCache[instance] = nil
+        -- Update the cache when an instance is removed
+        cacheStaticParts()
     end)
 end
 
@@ -156,5 +166,5 @@ RunService.Heartbeat:Connect(function()
     cleanupHighlights()
 end)
 
-setupWorkspaceListeners(Workspace)
+setupWorkspaceListeners()
 highlightFigureRig()
