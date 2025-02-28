@@ -75,51 +75,59 @@ local function findAndHighlightInstances()
 end
 
 local function highlightDoors()
+    
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for _, room in ipairs(Workspace:GetChildren()) do
-        local door = room:FindFirstChild("Door") and room.Door:FindFirstChild("Door")
-        if door and not highlightedCache[door] then
-            addHighlight(door, doorHighlightColor)
+    local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
+    if not currentRoomsFolder then return end
 
-            if not door:FindFirstChild("BillBoard") then
-                local bb = Instance.new("BillboardGui")
+    for _, room in ipairs(currentRoomsFolder:GetChildren()) do
+        if room:IsA("Model") and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
+            local door = room.Door.Door
+            -- Add a Highlight if it doesn't already exist
+            if not highlightedCache[door] then
+                local hg = Instance.new("Highlight", door)
+                hg.FillColor = Color3.fromRGB(241, 196, 15)
+                hg.FillTransparency = 0.5
+                highlightedCache[door] = hg
+
+                -- Add a BillboardGui for distance labeling
+                local bb = Instance.new("BillboardGui", door)
                 bb.Adornee = door
+                bb.ExtentsOffset = Vector3.new(0, 1, 0)
                 bb.AlwaysOnTop = true
                 bb.Size = UDim2.new(0, 6, 0, 6)
                 bb.StudsOffset = Vector3.new(0, 1, 0)
                 bb.Name = "BillBoard"
-                bb.Parent = door
 
-                local nameLabel = Instance.new("TextLabel")
-                nameLabel.BackgroundTransparency = 1
-                nameLabel.Position = UDim2.new(0, 0, 0, -45)
-                nameLabel.Size = UDim2.new(1, 0, 10, 0)
-                nameLabel.Font = Enum.Font.ArialBold
-                nameLabel.Text = "Door"
-                nameLabel.TextStrokeTransparency = 0.5
-                nameLabel.TextColor3 = doorHighlightColor
-                nameLabel.ZIndex = 10
-                nameLabel.Parent = bb
+                local txtlbl = Instance.new("TextLabel", bb)
+                txtlbl.ZIndex = 10
+                txtlbl.BackgroundTransparency = 1
+                txtlbl.Position = UDim2.new(0, 0, 0, -45)
+                txtlbl.Size = UDim2.new(1, 0, 10, 0)
+                txtlbl.Font = Enum.Font.ArialBold
+                txtlbl.Text = "Door " .. room.Name
+                txtlbl.TextStrokeTransparency = 0.5
+                txtlbl.TextColor3 = Color3.fromRGB(241, 196, 15)
 
-                local distLabel = Instance.new("TextLabel")
-                distLabel.Name = "Dist"
-                distLabel.BackgroundTransparency = 1
-                distLabel.Position = UDim2.new(0, 0, 0, -15)
-                distLabel.Size = UDim2.new(1, 0, 10, 0)
-                distLabel.Font = Enum.Font.ArialBold
-                distLabel.TextStrokeTransparency = 0.5
-                distLabel.TextColor3 = doorHighlightColor
-                distLabel.ZIndex = 10
-                distLabel.Parent = bb
+                local txtlbl2 = Instance.new("TextLabel", bb)
+                txtlbl2.ZIndex = 10
+                txtlbl2.BackgroundTransparency = 1
+                txtlbl2.Position = UDim2.new(0, 0, 0, -15)
+                txtlbl2.Size = UDim2.new(1, 0, 10, 0)
+                txtlbl2.Font = Enum.Font.ArialBold
+                txtlbl2.TextStrokeTransparency = 0.5
+                txtlbl2.TextColor3 = Color3.fromRGB(241, 196, 15)
+                txtlbl2.Name = "Dist"
             end
-        end
 
-        local bb = door and door:FindFirstChild("BillBoard")
-        local distLabel = bb and bb:FindFirstChild("Dist")
-        if distLabel then
-            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+            -- Update distance label dynamically
+            local bb = door:FindFirstChild("BillBoard")
+            local distLabel = bb and bb:FindFirstChild("Dist")
+            if distLabel then
+                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+            end
         end
     end
 end
