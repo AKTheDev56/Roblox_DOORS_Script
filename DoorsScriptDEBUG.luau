@@ -45,6 +45,18 @@ local function cleanupHighlights()
     end
 end
 
+local function sendNotification(title, text)
+    local NotificationBindable = Instance.new("BindableFunction")
+    NotificationBindable.OnInvoke = function() end
+
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 5,
+        Callback = NotificationBindable
+    })
+end
+
 local function cacheStaticParts()
     staticPartsCache = {} -- Clear previous cache
     for _, child in ipairs(Workspace:GetDescendants()) do
@@ -62,16 +74,54 @@ local function findAndHighlightInstances()
     end
 end
 
-local function sendNotification(title, text)
-    local NotificationBindable = Instance.new("BindableFunction")
-    NotificationBindable.OnInvoke = function() end
+local function highlightDoors()
+    local playerPrimaryPart = getPlayerPrimaryPart()
+    if not playerPrimaryPart then return end
 
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = 5,
-        Callback = NotificationBindable
-    })
+    for _, room in ipairs(Workspace:GetChildren()) do
+        local door = room:FindFirstChild("Door") and room.Door:FindFirstChild("Door")
+        if door and not highlightedCache[door] then
+            addHighlight(door, doorHighlightColor)
+
+            if not door:FindFirstChild("BillBoard") then
+                local bb = Instance.new("BillboardGui")
+                bb.Adornee = door
+                bb.AlwaysOnTop = true
+                bb.Size = UDim2.new(0, 6, 0, 6)
+                bb.StudsOffset = Vector3.new(0, 1, 0)
+                bb.Name = "BillBoard"
+                bb.Parent = door
+
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Position = UDim2.new(0, 0, 0, -45)
+                nameLabel.Size = UDim2.new(1, 0, 10, 0)
+                nameLabel.Font = Enum.Font.ArialBold
+                nameLabel.Text = "Door"
+                nameLabel.TextStrokeTransparency = 0.5
+                nameLabel.TextColor3 = doorHighlightColor
+                nameLabel.ZIndex = 10
+                nameLabel.Parent = bb
+
+                local distLabel = Instance.new("TextLabel")
+                distLabel.Name = "Dist"
+                distLabel.BackgroundTransparency = 1
+                distLabel.Position = UDim2.new(0, 0, 0, -15)
+                distLabel.Size = UDim2.new(1, 0, 10, 0)
+                distLabel.Font = Enum.Font.ArialBold
+                distLabel.TextStrokeTransparency = 0.5
+                distLabel.TextColor3 = doorHighlightColor
+                distLabel.ZIndex = 10
+                distLabel.Parent = bb
+            end
+        end
+
+        local bb = door and door:FindFirstChild("BillBoard")
+        local distLabel = bb and bb:FindFirstChild("Dist")
+        if distLabel then
+            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+        end
+    end
 end
 
 local function setupWorkspaceListeners()
@@ -102,8 +152,10 @@ end
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
     findAndHighlightInstances()
+    highlightDoors()
 end)
 
 setupWorkspaceListeners()
 cacheStaticParts()
 findAndHighlightInstances()
+highlightDoors()
