@@ -130,16 +130,14 @@ local function highlightDoors(folder)
 end
 
 local function highlightFigureRig()
-    local room50 = Workspace:WaitForChild("CurrentRooms"):WaitForChild("50")
+    local room50 = Workspace:WaitForChild("50")
     local figureRig = room50:WaitForChild("FigureRig")
 
     addHighlight(figureRig, colourChosen)
 end
 
-local function setupFolderListeners(folder)
-    cacheStaticParts(folder)
-
-    folder.ChildAdded:Connect(function(child)
+local function setupWorkspaceListeners(workspace)
+    workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
                 sendNotification("RUSH", "HIDE")
@@ -149,26 +147,14 @@ local function setupFolderListeners(folder)
                 sendNotification("EYES", "LOOK AWAY")
             end
         end
-        cacheStaticParts(folder)
-    end)
-
-    folder.DescendantRemoving:Connect(function(instance)
-        highlightedCache[instance] = nil
     end)
 end
 
 RunService.Heartbeat:Connect(function()
-    local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
-    if currentRoomsFolder then
-        findAndHighlightInstances()
-        highlightDoors(currentRoomsFolder)
-        cleanupHighlights()
-    end
+    findAndHighlightInstances()
+    highlightDoors(Workspace)
+    cleanupHighlights()
 end)
 
-local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
-if currentRoomsFolder then
-    setupFolderListeners(currentRoomsFolder)
-end
-
+setupWorkspaceListeners(Workspace)
 highlightFigureRig()
