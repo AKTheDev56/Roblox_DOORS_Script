@@ -8,3 +8,4 @@ Script For Roblox Doors
 (You may modify the code, however i kindly ask you to credit, and dont take of your own.)
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/AKTheDev56/Roblox_DOORS_Script/refs/heads/main/DoorsScript.luau",true))()
+(dont click the link, copy the text, if you click the link it will say page not found.)
