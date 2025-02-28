@@ -3,7 +3,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 
 local colourTable = {
-    Red = Color3.fromRGB(255, 0, 0),
+    Red = Color3.fromRGB(0, 255, 0),
     Yellow = Color3.fromRGB(241, 196, 15)
 }
 local colourChosen = colourTable.Red
