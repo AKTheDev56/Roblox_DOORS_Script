@@ -1,2 +1,0 @@
---test
-local yap = print
