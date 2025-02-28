@@ -5,13 +5,13 @@ local Players = game:GetService("Players")
 local colourTable = {
     Red = Color3.fromRGB(255, 0, 0),
     Yellow = Color3.fromRGB(241, 196, 15),
-    Green = Color3.fromRGB(0, 255, 0) -- Defined Green
+    Green = Color3.fromRGB(0, 255, 0)
 }
-local colourChosen = colourTable.Green -- Corrected to use Green
+local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true }
+local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 local highlightedCache = {}
 local staticPartsCache = {}
 
@@ -116,8 +116,15 @@ local function highlightDoors(folder)
     end
 end
 
+local function highlightFigureRig()
+    local room50 = Workspace:WaitForChild("CurrentRooms"):WaitForChild("50")
+    local figureRig = room50:WaitForChild("FigureRig")
+
+    addHighlight(figureRig, colourChosen)
+end
+
 local function setupFolderListeners(folder)
-    cacheStaticParts(folder) -- Cache parts initially
+    cacheStaticParts(folder)
 
     folder.ChildAdded:Connect(function()
         cacheStaticParts(folder)
@@ -137,8 +144,9 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Initial Setup
 local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
 if currentRoomsFolder then
     setupFolderListeners(currentRoomsFolder)
 end
+
+highlightFigureRig()
