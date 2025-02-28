@@ -1,6 +1,7 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
 
 local colourTable = {
     Red = Color3.fromRGB(255, 0, 0),
@@ -47,6 +48,18 @@ local function cleanupHighlights()
             highlightedCache[instance] = nil
         end
     end
+end
+
+local function sendNotification(title, text)
+    local NotificationBindable = Instance.new("BindableFunction")
+    NotificationBindable.OnInvoke = function() end
+
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 5,
+        Callback = NotificationBindable
+    })
 end
 
 local function cacheStaticParts(folder)
@@ -126,7 +139,16 @@ end
 local function setupFolderListeners(folder)
     cacheStaticParts(folder)
 
-    folder.ChildAdded:Connect(function()
+    folder.ChildAdded:Connect(function(child)
+        if child:IsA("Model") then
+            if child.Name == "RushMoving" then
+                sendNotification("RUSH", "HIDE")
+            elseif child.Name == "AmbushMoving" then
+                sendNotification("AMBUSH", "HIDE")
+            elseif child.Name == "Eyes" then
+                sendNotification("EYES", "LOOK AWAY")
+            end
+        end
         cacheStaticParts(folder)
     end)
 
