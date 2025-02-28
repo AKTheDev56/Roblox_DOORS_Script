@@ -62,19 +62,34 @@ local function sendNotification(title, text)
     })
 end
 
+local function cacheStaticParts()
+    staticPartsCache = {} -- Clear previous cache
+    for _, child in ipairs(Workspace:GetDescendants()) do
+        -- Cache mesh parts that match the highlightParts list
+        if child:IsA("MeshPart") and highlightParts[child.Name] then
+            table.insert(staticPartsCache, child)
+        end
+    end
+end
+
+local function findAndHighlightInstances()
+    for _, part in ipairs(staticPartsCache) do
+        addHighlight(part, colourChosen)
+    end
+end
+
 local function highlightDoors()
     
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    -- Access Workspace.CurrentRooms to locate doors
     local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
     if not currentRoomsFolder then return end
 
     for _, room in ipairs(currentRoomsFolder:GetChildren()) do
         if room:IsA("Model") and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
             local door = room.Door.Door
-            -- Add a Highlight if it doesn't already exist
+            
             if not highlightedCache[door] then
                 local hg = Instance.new("Highlight", door)
                 hg.FillColor = Color3.fromRGB(241, 196, 15)
@@ -135,8 +150,12 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
+    cacheStaticParts()
+    findAndHighlightInstances()
     highlightDoors()
 end)
 
 setupWorkspaceListeners()
+cacheStaticParts()
+findAndHighlightInstances()
 highlightDoors()
