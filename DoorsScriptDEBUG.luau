@@ -13,13 +13,15 @@ local colourTable = {
 local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
--- Highlight targets
+-- Highlight targets (these are the models/parts to search for and highlight)
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
 local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
 -- Cache for performance
 local highlightedCache = {}
-local doorCache = {}
+
+-- Directory for models/parts to search
+local currentRooms = Workspace:WaitForChild("CurrentRooms")
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -45,24 +47,9 @@ end
 
 local function cleanupHighlights()
     for instance, highlight in pairs(highlightedCache) do
-        if not instance:IsDescendantOf(Workspace.CurrentRooms) or not instance.Parent then
+        if not instance:IsDescendantOf(currentRooms) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
-        end
-    end
-end
-
-local function updateDoorDistance(door)
-    if not doorCache[door] then
-        return
-    end
-
-    local playerPrimaryPart = getPlayerPrimaryPart()
-    if playerPrimaryPart then
-        local bb = door:FindFirstChild("BillBoard")
-        local distLabel = bb and bb:FindFirstChild("Dist")
-        if distLabel then
-            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
         end
     end
 end
@@ -72,12 +59,12 @@ local function processWorkspace()
     if not playerPrimaryPart then return end
 
     -- Search for doors in CurrentRooms
-    for _, child in ipairs(Workspace.CurrentRooms:GetChildren()) do
+    for _, child in ipairs(currentRooms:GetDescendants()) do
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
             addHighlight(door, doorHighlightColor)
 
-            -- Add or update distance label if necessary
+            -- Add or update distance label
             if not door:FindFirstChild("BillBoard") then
                 local bb = Instance.new("BillboardGui", door)
                 bb.Adornee = door
@@ -97,8 +84,11 @@ local function processWorkspace()
                 distanceLabel.Name = "Dist"
             end
 
-            -- Update distance label
-            updateDoorDistance(door)
+            local bb = door:FindFirstChild("BillBoard")
+            local distLabel = bb and bb:FindFirstChild("Dist")
+            if distLabel then
+                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+            end
         end
 
         -- Highlight mesh parts and models in CurrentRooms
@@ -106,10 +96,8 @@ local function processWorkspace()
             if highlightParts[child.Name] then
                 addHighlight(child, colourChosen)
             end
-        elseif child:IsA("Model") then
-            if highlightModels[child.Name] then
-                addHighlight(child, colourChosen)
-            end
+        elseif child:IsA("Model") and highlightModels[child.Name] then
+            addHighlight(child, colourChosen)
         end
     end
 end
@@ -125,18 +113,6 @@ local function setupWorkspaceListeners()
             elseif child.Name == "Eyes" then
                 StarterGui:SetCore("SendNotification", { Title = "EYES", Text = "LOOK AWAY", Duration = 5 })
             end
-        end
-    end)
-
-    Workspace.ChildRemoved:Connect(function(child)
-        -- Clean up highlights and caches for removed objects
-        if highlightedCache[child] then
-            highlightedCache[child]:Destroy()
-            highlightedCache[child] = nil
-        end
-
-        if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
-            doorCache[child.Door.Door] = nil
         end
     end)
 end
