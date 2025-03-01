@@ -81,12 +81,14 @@ local function processWorkspace()
                     distanceLabel.TextColor3 = doorHighlightColor
                     distanceLabel.Name = "Dist"
                 end
+            end
 
-                local bb = door:FindFirstChild("BillBoard")
-                local distLabel = bb and bb:FindFirstChild("Dist")
-                if distLabel then
-                    distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
-                end
+            -- Recalculate and update the distance
+            local bb = door:FindFirstChild("BillBoard")
+            local distLabel = bb and bb:FindFirstChild("Dist")
+            if distLabel then
+                local distance = round((playerPrimaryPart.Position - door.Position).magnitude, 1)
+                distLabel.Text = distance .. " Studs"
             end
         end
 
