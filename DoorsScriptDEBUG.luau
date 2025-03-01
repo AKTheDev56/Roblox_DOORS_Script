@@ -122,13 +122,7 @@ local function checkFigureRig()
         local figureRig = figureRigFolder:FindFirstChild("FigureRig")
         if figureRig then
             addHighlight(figureRig, colourChosen)
-        else
-            -- Only print once if FigureRig is not found
-            print("FigureRig not found in 50 folder.")
         end
-    else
-        -- Only print once if 50 folder is not found
-        print("50 folder not found, waiting...")
     end
 end
 
