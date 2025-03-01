@@ -52,9 +52,6 @@ local function cleanupHighlights()
 end
 
 local function processObject(instance)
-    local playerPrimaryPart = getPlayerPrimaryPart()
-    if not playerPrimaryPart then return end
-
     -- Highlight mesh parts
     if instance:IsA("MeshPart") and highlightParts[instance.Name] then
         addHighlight(instance, colourChosen)
@@ -85,13 +82,6 @@ local function processObject(instance)
             distanceLabel.TextColor3 = doorHighlightColor
             distanceLabel.Name = "Dist"
         end
-
-        -- Update distance text dynamically
-        local bb = door:FindFirstChild("BillBoard")
-        local distLabel = bb and bb:FindFirstChild("Dist")
-        if distLabel then
-            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
-        end
     end
 end
 
@@ -105,7 +95,6 @@ local function updateDistanceLabels()
             local bb = door:FindFirstChild("BillBoard")
             local distLabel = bb and bb:FindFirstChild("Dist")
             if distLabel then
-                -- Ensure distance label is dynamically updated
                 distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
             end
         end
