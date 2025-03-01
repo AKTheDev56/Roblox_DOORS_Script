@@ -18,6 +18,7 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 
 -- Cache for performance
 local highlightedCache = {}
+local doorCache = {}  -- New cache for doors
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -50,6 +51,17 @@ local function cleanupHighlights()
     end
 end
 
+local function updateDistanceLabel(door)
+    local playerPrimaryPart = getPlayerPrimaryPart()
+    if not playerPrimaryPart or not door then return end
+
+    local bb = door:FindFirstChild("BillBoard")
+    local distLabel = bb and bb:FindFirstChild("Dist")
+    if distLabel then
+        distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+    end
+end
+
 local function processObject(instance)
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
@@ -60,9 +72,11 @@ local function processObject(instance)
     elseif instance:IsA("Model") then
         if highlightModels[instance.Name] then
             addHighlight(instance, colourChosen)
+
         elseif instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
             local door = instance.Door.Door
             addHighlight(door, doorHighlightColor)
+            doorCache[door] = true  -- Cache the door for distance updates
 
             -- Check if BillboardGui exists
             local bb = door:FindFirstChild("BillBoard")
@@ -84,27 +98,22 @@ local function processObject(instance)
                 distanceLabel.TextStrokeTransparency = 0.5
                 distanceLabel.TextColor3 = doorHighlightColor
                 distanceLabel.Name = "Dist"
+                distanceLabel.Text = "..."  -- Placeholder to ensure it's not "Label"
                 distanceLabel.Parent = bb
             end
+
+            -- **Immediate update of distance label**
+            updateDistanceLabel(door)
         end
     end
 end
 
-local function updateDistanceLabels()
+local function updateAllDistanceLabels()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for instance, highlight in pairs(highlightedCache) do
-        if instance:IsA("MeshPart") or instance:IsA("Model") then
-            if instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
-                local door = instance.Door.Door
-                local bb = door:FindFirstChild("BillBoard")
-                local distLabel = bb and bb:FindFirstChild("Dist")
-                if distLabel then
-                    distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
-                end
-            end
-        end
+    for door, _ in pairs(doorCache) do
+        updateDistanceLabel(door)
     end
 end
 
@@ -116,12 +125,16 @@ local function setupWorkspaceListeners()
             highlightedCache[instance]:Destroy()
             highlightedCache[instance] = nil
         end
+
+        if doorCache[instance] then
+            doorCache[instance] = nil
+        end
     end)
 end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
-    updateDistanceLabels()
+    updateAllDistanceLabels() -- Ensures all doors update distance dynamically
 end)
 
 -- Initialize
