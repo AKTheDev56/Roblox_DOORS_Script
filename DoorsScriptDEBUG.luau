@@ -20,6 +20,9 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 -- Cache for performance
 local highlightedCache = {}
 
+-- Flag to track if FigureRig has been highlighted
+local figureRigHighlighted = false
+
 -- Counter for folder check frequency
 local folderCheckCounter = 0
 local folderCheckFrequency = 60 -- How often to check (every 60 frames)
@@ -116,12 +119,18 @@ local function checkFigureRig()
     end
     folderCheckCounter = 0 -- Reset the counter
 
+    -- Only check and highlight FigureRig if it hasn't been highlighted already
+    if figureRigHighlighted then
+        return
+    end
+
     -- Check for FigureRig in Workspace.CurrentRooms.50
     local figureRigFolder = Workspace.CurrentRooms:FindFirstChild("50")
     if figureRigFolder then
         local figureRig = figureRigFolder:FindFirstChild("FigureRig")
         if figureRig then
             addHighlight(figureRig, colourChosen)
+            figureRigHighlighted = true -- Mark it as highlighted so we stop searching
         end
     end
 end
