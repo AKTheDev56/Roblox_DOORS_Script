@@ -15,7 +15,7 @@ local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true }
+local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
 -- Cache for performance
 local highlightedCache = {}
@@ -51,11 +51,25 @@ local function cleanupHighlights()
     end
 end
 
-local function processWorkspace()
+local function highlightKeyAndModels()
+    -- Search for parts and models in CurrentRooms
+    for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
+        if child:IsA("MeshPart") then
+            -- Check if the part should be highlighted
+            if highlightParts[child.Name] then
+                addHighlight(child, colourChosen)
+            end
+        elseif child:IsA("Model") and highlightModels[child.Name] then
+            addHighlight(child, colourChosen)
+        end
+    end
+end
+
+local function processDoors()
+    -- Search for doors in CurrentRooms
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    -- Search for doors in CurrentRooms
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
@@ -87,31 +101,21 @@ local function processWorkspace()
                 distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
             end
         end
-
-        -- Highlight mesh parts and models in CurrentRooms
-        if child:IsA("MeshPart") then
-            if highlightParts[child.Name] then
-                addHighlight(child, colourChosen)
-            end
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
-        end
     end
+end
 
-    -- Check for FigureRig in CurrentRooms.50 and wait for it if not found
-    local figureRigDirectory = Workspace.CurrentRooms:FindFirstChild("50")
-    if figureRigDirectory then
-        local figureRig = figureRigDirectory:FindFirstChild("FigureRig")
+local function checkFigureRig()
+    -- Check for FigureRig in Workspace.CurrentRooms.50
+    local figureRigFolder = Workspace.CurrentRooms:WaitForChild("50", 10)
+    if figureRigFolder then
+        local figureRig = figureRigFolder:FindFirstChild("FigureRig")
         if figureRig then
             addHighlight(figureRig, colourChosen)
         else
-            -- Wait for FigureRig to exist in 50
-            figureRigDirectory.ChildAdded:Wait()
-            local newFigureRig = figureRigDirectory:FindFirstChild("FigureRig")
-            if newFigureRig then
-                addHighlight(newFigureRig, colourChosen)
-            end
+            print("FigureRig not found in 50 folder.")
         end
+    else
+        print("50 folder not found, waiting...")
     end
 end
 
@@ -132,8 +136,9 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights() -- Clean up invalid highlights
-    processWorkspace() -- Process all doors, mesh parts, and models dynamically in CurrentRooms
+    highlightKeyAndModels() -- Highlight Key, Inset, Ring, Tag, LeverForGate, LiveHintBook, and FigureRig
+    processDoors() -- Process all doors in CurrentRooms
+    checkFigureRig() -- Ensure FigureRig is checked and highlighted
 end)
 
 setupWorkspaceListeners()
-processWorkspace()
