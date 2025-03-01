@@ -15,7 +15,7 @@ local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
+local highlightModels = { LeverForGate = true, LiveHintBook = true }
 
 -- Cache to prevent duplicate highlights
 local highlightedCache = {}
