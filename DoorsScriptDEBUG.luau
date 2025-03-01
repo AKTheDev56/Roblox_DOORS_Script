@@ -1,6 +1,7 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService") -- NEW for efficient highlights
 
 local player = Players.LocalPlayer
 
@@ -18,7 +19,6 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 
 -- Caches for performance
 local highlightedCache = {}
-local doorCache = {}
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -32,6 +32,9 @@ end
 
 local function addHighlight(instance, color)
     if not highlightedCache[instance] then
+        -- Use CollectionService for efficient tag-based highlights
+        CollectionService:AddTag(instance, "Highlighted")
+        
         local highlight = Instance.new("Highlight")
         highlight.Adornee = instance
         highlight.Parent = instance
@@ -47,33 +50,38 @@ local function cleanupHighlights()
         if not instance:IsDescendantOf(Workspace) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
+            CollectionService:RemoveTag(instance, "Highlighted")
         end
     end
 end
 
-local function updateDistanceLabel(door)
+local function updateDistanceLabel(doorPart)
     local playerPrimaryPart = getPlayerPrimaryPart()
-    if not playerPrimaryPart or not door then return end
+    if not playerPrimaryPart or not doorPart then return end
 
-    local bb = door:FindFirstChild("BillBoard")
+    local bb = doorPart:FindFirstChild("BillBoard")
     local distLabel = bb and bb:FindFirstChild("Dist")
     if distLabel then
-        distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+        local distance = round((playerPrimaryPart.Position - doorPart.Position).magnitude, 1)
+        distLabel.Text = tostring(distance) .. " Studs"
     end
 end
 
 local function processDoor(instance)
-    if doorCache[instance] then return end  -- Prevent duplicate processing
+    if CollectionService:HasTag(instance, "ProcessedDoor") then return end -- Prevent duplicate processing
 
     local door = instance:FindFirstChild("Door")
     if door and door:FindFirstChild("Door") then
         local doorPart = door.Door
-        addHighlight(doorPart, doorHighlightColor)
-        doorCache[doorPart] = true
+        CollectionService:AddTag(doorPart, "ProcessedDoor") -- Mark as processed
 
-        -- Add distance label if not already present
-        if not doorPart:FindFirstChild("BillBoard") then
-            local bb = Instance.new("BillboardGui")
+        -- Add highlight
+        addHighlight(doorPart, doorHighlightColor)
+
+        -- Ensure label exists
+        local bb = doorPart:FindFirstChild("BillBoard")
+        if not bb then
+            bb = Instance.new("BillboardGui")
             bb.Adornee = doorPart
             bb.ExtentsOffset = Vector3.new(0, 1, 0)
             bb.AlwaysOnTop = true
@@ -90,11 +98,11 @@ local function processDoor(instance)
             distanceLabel.TextStrokeTransparency = 0.5
             distanceLabel.TextColor3 = doorHighlightColor
             distanceLabel.Name = "Dist"
-            distanceLabel.Text = "..."  -- Temporary placeholder
+            distanceLabel.Text = "Calculating..."
             distanceLabel.Parent = bb
         end
 
-        -- Immediately update distance label
+        -- Immediately update distance
         updateDistanceLabel(doorPart)
     end
 end
@@ -113,22 +121,24 @@ local function updateAllDistanceLabels()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for door, _ in pairs(doorCache) do
-        updateDistanceLabel(door)
+    for instance, highlight in pairs(highlightedCache) do
+        if instance:IsA("Model") and instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
+            local door = instance.Door.Door
+            updateDistanceLabel(door)
+        end
     end
 end
 
 local function setupWorkspaceListeners()
-    Workspace.DescendantAdded:Connect(processObject)
+    Workspace.DescendantAdded:Connect(function(instance)
+        processObject(instance)
+    end)
 
     Workspace.DescendantRemoving:Connect(function(instance)
         if highlightedCache[instance] then
             highlightedCache[instance]:Destroy()
             highlightedCache[instance] = nil
-        end
-
-        if doorCache[instance] then
-            doorCache[instance] = nil
+            CollectionService:RemoveTag(instance, "Highlighted")
         end
     end)
 end
