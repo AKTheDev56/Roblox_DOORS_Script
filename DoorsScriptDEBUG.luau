@@ -55,8 +55,8 @@ local function processWorkspace()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
+    -- Search for doors in CurrentRooms
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
-        -- Highlight doors
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
             addHighlight(door, doorHighlightColor)
@@ -88,9 +88,11 @@ local function processWorkspace()
             end
         end
 
-        -- Highlight mesh parts and models
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            addHighlight(child, colourChosen)
+        -- Highlight mesh parts and models in CurrentRooms
+        if child:IsA("MeshPart") then
+            if highlightParts[child.Name] then
+                addHighlight(child, colourChosen)
+            end
         elseif child:IsA("Model") and highlightModels[child.Name] then
             addHighlight(child, colourChosen)
         end
@@ -98,7 +100,8 @@ local function processWorkspace()
 end
 
 local function setupWorkspaceListeners()
-    Workspace.CurrentRooms.ChildAdded:Connect(function(child)
+    -- Check for specific models (RushMoving, AmbushMoving, Eyes) in Workspace
+    Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
                 StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
@@ -113,7 +116,7 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights() -- Clean up invalid highlights
-    processWorkspace() -- Process all doors, mesh parts, and models dynamically
+    processWorkspace() -- Process all doors, mesh parts, and models dynamically in CurrentRooms
 end)
 
 setupWorkspaceListeners()
