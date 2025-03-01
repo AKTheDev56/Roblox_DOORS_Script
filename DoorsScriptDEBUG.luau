@@ -59,7 +59,6 @@ local function processWorkspace()
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         -- Handle highlighting Key, Inset, Ring, Tag meshparts
         if child:IsA("MeshPart") and highlightParts[child.Name] then
-            -- Only add highlight if not highlighted yet
             addHighlight(child, colourChosen)
         end
 
@@ -71,10 +70,9 @@ local function processWorkspace()
         -- Handle door highlighting
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
-            -- Only add highlight if not highlighted yet
             addHighlight(door, doorHighlightColor)
 
-            -- Add or update distance label if it doesn't exist
+            -- Add or update distance label
             if not door:FindFirstChild("BillBoard") then
                 local bb = Instance.new("BillboardGui", door)
                 bb.Adornee = door
@@ -105,6 +103,19 @@ local function processWorkspace()
 end
 
 local function setupWorkspaceListeners()
+    -- Detect new parts/models being added
+    Workspace.CurrentRooms.ChildAdded:Connect(function(newRoom)
+        newRoom.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("MeshPart") and highlightParts[descendant.Name] then
+                addHighlight(descendant, colourChosen)
+            elseif descendant:IsA("Model") and highlightModels[descendant.Name] then
+                addHighlight(descendant, colourChosen)
+            elseif descendant:IsA("Model") and descendant:FindFirstChild("Door") and descendant.Door:FindFirstChild("Door") then
+                addHighlight(descendant.Door.Door, doorHighlightColor)
+            end
+        end)
+    end)
+
     -- Check for specific models (RushMoving, AmbushMoving, Eyes) in Workspace
     Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
