@@ -106,8 +106,10 @@ local function processWorkspace()
             if highlightParts[child.Name] then
                 addHighlight(child, colourChosen)
             end
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
+        elseif child:IsA("Model") then
+            if highlightModels[child.Name] then
+                addHighlight(child, colourChosen)
+            end
         end
     end
 end
