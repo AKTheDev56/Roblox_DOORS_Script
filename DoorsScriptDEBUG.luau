@@ -20,12 +20,11 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 -- Cache for performance
 local highlightedCache = {}
 
--- Flag to track if FigureRig has been highlighted
+-- Flags to track highlighted parts/models
+local highlightedKeys = false
+local highlightedLeverForGate = false
+local highlightedLiveHintBook = false
 local figureRigHighlighted = false
-
--- Counter for folder check frequency
-local folderCheckCounter = 0
-local folderCheckFrequency = 60 -- How often to check (every 60 frames)
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -58,25 +57,11 @@ local function cleanupHighlights()
     end
 end
 
-local function highlightKeyAndModels()
-    -- Search for parts and models in CurrentRooms
-    for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
-        if child:IsA("MeshPart") then
-            -- Check if the part should be highlighted
-            if highlightParts[child.Name] then
-                addHighlight(child, colourChosen)
-            end
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
-        end
-    end
-end
-
-local function processDoors()
-    -- Search for doors in CurrentRooms
+local function processWorkspace()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
+    -- Search for doors in CurrentRooms
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
@@ -108,29 +93,23 @@ local function processDoors()
                 distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
             end
         end
-    end
-end
 
-local function checkFigureRig()
-    -- Only check for FigureRig once every few frames (reduce frequency of checking)
-    folderCheckCounter = folderCheckCounter + 1
-    if folderCheckCounter < folderCheckFrequency then
-        return
-    end
-    folderCheckCounter = 0 -- Reset the counter
-
-    -- Only check and highlight FigureRig if it hasn't been highlighted already
-    if figureRigHighlighted then
-        return
-    end
-
-    -- Check for FigureRig in Workspace.CurrentRooms.50
-    local figureRigFolder = Workspace.CurrentRooms:FindFirstChild("50")
-    if figureRigFolder then
-        local figureRig = figureRigFolder:FindFirstChild("FigureRig")
-        if figureRig then
-            addHighlight(figureRig, colourChosen)
-            figureRigHighlighted = true -- Mark it as highlighted so we stop searching
+        -- Highlight mesh parts and models in CurrentRooms
+        if child:IsA("MeshPart") then
+            -- Ensure only the specified parts are highlighted once
+            if highlightParts[child.Name] and not highlightedKeys then
+                addHighlight(child, colourChosen)
+                highlightedKeys = true -- Prevent future highlighting of Key, Inset, Ring, and Tag
+            end
+        elseif child:IsA("Model") then
+            -- Ensure only LeverForGate and LiveHintBook are highlighted once
+            if child.Name == "LeverForGate" and not highlightedLeverForGate then
+                addHighlight(child, colourChosen)
+                highlightedLeverForGate = true
+            elseif child.Name == "LiveHintBook" and not highlightedLiveHintBook then
+                addHighlight(child, colourChosen)
+                highlightedLiveHintBook = true
+            end
         end
     end
 end
@@ -152,9 +131,8 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights() -- Clean up invalid highlights
-    highlightKeyAndModels() -- Highlight Key, Inset, Ring, Tag, LeverForGate, LiveHintBook, and FigureRig
-    processDoors() -- Process all doors in CurrentRooms
-    checkFigureRig() -- Ensure FigureRig is checked and highlighted
+    processWorkspace() -- Process all doors, mesh parts, and models dynamically in CurrentRooms
 end)
 
 setupWorkspaceListeners()
+processWorkspace()
