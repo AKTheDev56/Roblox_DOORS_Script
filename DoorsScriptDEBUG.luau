@@ -64,24 +64,31 @@ local function processDoors()
                 highlightedDoors[door] = true
             end
 
-            -- Create or update distance label
-            local bb = door:FindFirstChild("BillBoard") or Instance.new("BillboardGui", door)
-            bb.Adornee = door
-            bb.ExtentsOffset = Vector3.new(0, 1, 0)
-            bb.AlwaysOnTop = true
-            bb.Size = UDim2.new(0, 6, 0, 6)
-            bb.Name = "BillBoard"
+            -- Ensure Billboard GUI exists
+            local bb = door:FindFirstChild("BillBoard")
+            if not bb then
+                bb = Instance.new("BillboardGui", door)
+                bb.Adornee = door
+                bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                bb.AlwaysOnTop = true
+                bb.Size = UDim2.new(0, 6, 0, 6)
+                bb.Name = "BillBoard"
+            end
 
-            local distLabel = bb:FindFirstChild("Dist") or Instance.new("TextLabel", bb)
-            distLabel.ZIndex = 10
-            distLabel.BackgroundTransparency = 1
-            distLabel.Position = UDim2.new(0, 0, 0, -15)
-            distLabel.Size = UDim2.new(1, 0, 10, 0)
-            distLabel.Font = Enum.Font.ArialBold
-            distLabel.TextStrokeTransparency = 0.5
-            distLabel.TextColor3 = doorHighlightColor
-            distLabel.Name = "Dist"
+            local distLabel = bb:FindFirstChild("Dist")
+            if not distLabel then
+                distLabel = Instance.new("TextLabel", bb)
+                distLabel.ZIndex = 10
+                distLabel.BackgroundTransparency = 1
+                distLabel.Position = UDim2.new(0, 0, 0, -15)
+                distLabel.Size = UDim2.new(1, 0, 10, 0)
+                distLabel.Font = Enum.Font.ArialBold
+                distLabel.TextStrokeTransparency = 0.5
+                distLabel.TextColor3 = doorHighlightColor
+                distLabel.Name = "Dist"
+            end
 
+            -- Update distance
             distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
         end
     end
@@ -99,13 +106,15 @@ end
 
 local function trackNewInstances()
     Workspace.CurrentRooms.ChildAdded:Connect(function(newChild)
-        task.wait(0.1) -- Small delay to ensure the object fully loads
+        task.wait(0.2) -- Slight delay to ensure it's fully parented
 
         for _, descendant in ipairs(newChild:GetDescendants()) do
             if descendant:IsA("MeshPart") and highlightParts[descendant.Name] then
                 addHighlight(descendant, colourChosen)
             elseif descendant:IsA("Model") and highlightModels[descendant.Name] then
                 addHighlight(descendant, colourChosen)
+            elseif descendant:IsA("Model") and descendant:FindFirstChild("Door") and descendant.Door:FindFirstChild("Door") then
+                addHighlight(descendant.Door.Door, doorHighlightColor)
             end
         end
     end)
@@ -122,7 +131,7 @@ local function trackFigureRig()
                     break -- Stop checking once highlighted
                 end
             end
-            task.wait(1) -- Reduce CPU usage by checking every second
+            task.wait(1) -- Check every second to reduce lag
         end
     end)
 end
