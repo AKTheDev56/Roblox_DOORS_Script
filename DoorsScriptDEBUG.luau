@@ -20,6 +20,10 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 -- Cache for performance
 local highlightedCache = {}
 
+-- Counter for folder check frequency
+local folderCheckCounter = 0
+local folderCheckFrequency = 60 -- How often to check (every 60 frames)
+
 local function getPlayerPrimaryPart()
     local character = player.Character
     return character and character.PrimaryPart
@@ -105,16 +109,25 @@ local function processDoors()
 end
 
 local function checkFigureRig()
+    -- Only check for FigureRig once every few frames (reduce frequency of checking)
+    folderCheckCounter = folderCheckCounter + 1
+    if folderCheckCounter < folderCheckFrequency then
+        return
+    end
+    folderCheckCounter = 0 -- Reset the counter
+
     -- Check for FigureRig in Workspace.CurrentRooms.50
-    local figureRigFolder = Workspace.CurrentRooms:WaitForChild("50", 10)
+    local figureRigFolder = Workspace.CurrentRooms:FindFirstChild("50")
     if figureRigFolder then
         local figureRig = figureRigFolder:FindFirstChild("FigureRig")
         if figureRig then
             addHighlight(figureRig, colourChosen)
         else
+            -- Only print once if FigureRig is not found
             print("FigureRig not found in 50 folder.")
         end
     else
+        -- Only print once if 50 folder is not found
         print("50 folder not found, waiting...")
     end
 end
