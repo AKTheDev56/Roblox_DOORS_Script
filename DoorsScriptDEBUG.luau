@@ -44,7 +44,7 @@ end
 
 local function cleanupHighlights()
     for instance, highlight in pairs(highlightedCache) do
-        if not instance:IsDescendantOf(Workspace) or not instance.Parent then
+        if not instance:IsDescendantOf(Workspace.CurrentRooms) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
         end
@@ -55,7 +55,7 @@ local function processWorkspace()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for _, child in ipairs(Workspace:GetDescendants()) do
+    for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         -- Highlight doors
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
@@ -98,7 +98,7 @@ local function processWorkspace()
 end
 
 local function setupWorkspaceListeners()
-    Workspace.ChildAdded:Connect(function(child)
+    Workspace.CurrentRooms.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
             if child.Name == "RushMoving" then
                 StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
