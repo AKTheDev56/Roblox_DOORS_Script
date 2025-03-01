@@ -19,7 +19,6 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 
 -- Cache for performance
 local highlightedCache = {}
-local figureRigHighlighted = false -- To track if FigureRig has been highlighted
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -60,32 +59,34 @@ local function processWorkspace()
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
-            addHighlight(door, doorHighlightColor)
+            if not highlightedCache[door] then
+                addHighlight(door, doorHighlightColor)
 
-            -- Add or update distance label
-            if not door:FindFirstChild("BillBoard") then
-                local bb = Instance.new("BillboardGui", door)
-                bb.Adornee = door
-                bb.ExtentsOffset = Vector3.new(0, 1, 0)
-                bb.AlwaysOnTop = true
-                bb.Size = UDim2.new(0, 6, 0, 6)
-                bb.Name = "BillBoard"
+                -- Add or update distance label
+                if not door:FindFirstChild("BillBoard") then
+                    local bb = Instance.new("BillboardGui", door)
+                    bb.Adornee = door
+                    bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Size = UDim2.new(0, 6, 0, 6)
+                    bb.Name = "BillBoard"
 
-                local distanceLabel = Instance.new("TextLabel", bb)
-                distanceLabel.ZIndex = 10
-                distanceLabel.BackgroundTransparency = 1
-                distanceLabel.Position = UDim2.new(0, 0, 0, -15)
-                distanceLabel.Size = UDim2.new(1, 0, 10, 0)
-                distanceLabel.Font = Enum.Font.ArialBold
-                distanceLabel.TextStrokeTransparency = 0.5
-                distanceLabel.TextColor3 = doorHighlightColor
-                distanceLabel.Name = "Dist"
-            end
+                    local distanceLabel = Instance.new("TextLabel", bb)
+                    distanceLabel.ZIndex = 10
+                    distanceLabel.BackgroundTransparency = 1
+                    distanceLabel.Position = UDim2.new(0, 0, 0, -15)
+                    distanceLabel.Size = UDim2.new(1, 0, 10, 0)
+                    distanceLabel.Font = Enum.Font.ArialBold
+                    distanceLabel.TextStrokeTransparency = 0.5
+                    distanceLabel.TextColor3 = doorHighlightColor
+                    distanceLabel.Name = "Dist"
+                end
 
-            local bb = door:FindFirstChild("BillBoard")
-            local distLabel = bb and bb:FindFirstChild("Dist")
-            if distLabel then
-                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                local bb = door:FindFirstChild("BillBoard")
+                local distLabel = bb and bb:FindFirstChild("Dist")
+                if distLabel then
+                    distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                end
             end
         end
 
@@ -94,27 +95,25 @@ local function processWorkspace()
             if highlightParts[child.Name] and not highlightedCache[child] then
                 addHighlight(child, colourChosen)
             end
-        elseif child:IsA("Model") then
-            if highlightModels[child.Name] and not highlightedCache[child] then
-                addHighlight(child, colourChosen)
-            end
+        elseif child:IsA("Model") and highlightModels[child.Name] and not highlightedCache[child] then
+            addHighlight(child, colourChosen)
         end
     end
+end
 
-    -- Check for FigureRig in workspace.CurrentRooms.50, and wait if it doesn't exist
-    if not figureRigHighlighted then
-        local figureRigFolder = Workspace.CurrentRooms:FindFirstChild("50")
-        if figureRigFolder then
-            local figureRig = figureRigFolder:FindFirstChild("FigureRig")
-            if figureRig then
-                addHighlight(figureRig, colourChosen)
-                figureRigHighlighted = true -- Ensure we don't highlight again
+local function setupWorkspaceListeners()
+    -- Check for specific models (RushMoving, AmbushMoving, Eyes) in Workspace
+    Workspace.ChildAdded:Connect(function(child)
+        if child:IsA("Model") then
+            if child.Name == "RushMoving" then
+                StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
+            elseif child.Name == "AmbushMoving" then
+                StarterGui:SetCore("SendNotification", { Title = "AMBUSH", Text = "HIDE", Duration = 5 })
+            elseif child.Name == "Eyes" then
+                StarterGui:SetCore("SendNotification", { Title = "EYES", Text = "LOOK AWAY", Duration = 5 })
             end
-        else
-            -- Wait for the folder to exist
-            Workspace.CurrentRooms.ChildAdded:Wait()
         end
-    end
+    end)
 end
 
 RunService.Heartbeat:Connect(function()
@@ -122,4 +121,5 @@ RunService.Heartbeat:Connect(function()
     processWorkspace() -- Process all doors, mesh parts, and models dynamically in CurrentRooms
 end)
 
+setupWorkspaceListeners()
 processWorkspace()
