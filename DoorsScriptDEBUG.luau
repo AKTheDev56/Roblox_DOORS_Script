@@ -87,7 +87,7 @@ local function processDoors()
     end
 end
 
-local function processObjects()
+local function processExistingObjects()
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         if child:IsA("MeshPart") and highlightParts[child.Name] then
             addHighlight(child, colourChosen)
@@ -99,6 +99,8 @@ end
 
 local function trackNewInstances()
     Workspace.CurrentRooms.ChildAdded:Connect(function(newChild)
+        task.wait(0.1) -- Small delay to ensure the object fully loads
+
         for _, descendant in ipairs(newChild:GetDescendants()) do
             if descendant:IsA("MeshPart") and highlightParts[descendant.Name] then
                 addHighlight(descendant, colourChosen)
@@ -143,11 +145,11 @@ end
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
     processDoors()
-    processObjects()
+    processExistingObjects()
 end)
 
 setupWorkspaceListeners()
 trackNewInstances()
 trackFigureRig()
 processDoors()
-processObjects()
+processExistingObjects()
