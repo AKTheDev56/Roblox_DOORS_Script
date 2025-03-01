@@ -1,7 +1,7 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService") 
+local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 
@@ -17,7 +17,7 @@ local doorHighlightColor = colourTable.Yellow
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
 local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
--- Caches for performance
+-- Cache for performance
 local highlightedCache = {}
 
 local function getPlayerPrimaryPart()
@@ -32,8 +32,6 @@ end
 
 local function addHighlight(instance, color)
     if not highlightedCache[instance] then
-        CollectionService:AddTag(instance, "Highlighted") -- Prevent reprocessing
-        
         local highlight = Instance.new("Highlight")
         highlight.Adornee = instance
         highlight.Parent = instance
@@ -49,48 +47,35 @@ local function cleanupHighlights()
         if not instance:IsDescendantOf(Workspace) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
-            CollectionService:RemoveTag(instance, "Highlighted")
         end
     end
 end
 
-local function updateDistanceLabel(doorPart)
+local function processObject(instance)
     local playerPrimaryPart = getPlayerPrimaryPart()
-    if not playerPrimaryPart or not doorPart then return end
+    if not playerPrimaryPart then return end
 
-    local bb = doorPart:FindFirstChild("BillBoard")
-    local distLabel = bb and bb:FindFirstChild("Dist")
-    if distLabel then
-        local distance = round((playerPrimaryPart.Position - doorPart.Position).magnitude, 1)
-        distLabel.Text = tostring(distance) .. " Studs"
-    end
-end
+    -- Highlight mesh parts
+    if instance:IsA("MeshPart") and highlightParts[instance.Name] then
+        addHighlight(instance, colourChosen)
+    -- Highlight specific models
+    elseif instance:IsA("Model") and highlightModels[instance.Name] then
+        addHighlight(instance, colourChosen)
+    -- Highlight doors and add distance labels
+    elseif instance:IsA("Model") and instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
+        local door = instance.Door.Door
+        addHighlight(door, doorHighlightColor)
 
-local function processDoor(instance)
-    if CollectionService:HasTag(instance, "ProcessedDoor") then return end -- Prevent duplicate processing
-
-    local door = instance:FindFirstChild("Door")
-    if door and door:FindFirstChild("Door") then
-        local doorPart = door.Door
-        if CollectionService:HasTag(doorPart, "ProcessedDoor") then return end
-
-        CollectionService:AddTag(doorPart, "ProcessedDoor") -- Mark as processed
-
-        -- Add highlight
-        addHighlight(doorPart, doorHighlightColor)
-
-        -- Ensure label exists
-        local bb = doorPart:FindFirstChild("BillBoard")
-        if not bb then
-            bb = Instance.new("BillboardGui")
-            bb.Adornee = doorPart
+        -- Add distance label
+        if not door:FindFirstChild("BillBoard") then
+            local bb = Instance.new("BillboardGui", door)
+            bb.Adornee = door
             bb.ExtentsOffset = Vector3.new(0, 1, 0)
             bb.AlwaysOnTop = true
             bb.Size = UDim2.new(0, 6, 0, 6)
             bb.Name = "BillBoard"
-            bb.Parent = doorPart
 
-            local distanceLabel = Instance.new("TextLabel")
+            local distanceLabel = Instance.new("TextLabel", bb)
             distanceLabel.ZIndex = 10
             distanceLabel.BackgroundTransparency = 1
             distanceLabel.Position = UDim2.new(0, 0, 0, -15)
@@ -99,67 +84,54 @@ local function processDoor(instance)
             distanceLabel.TextStrokeTransparency = 0.5
             distanceLabel.TextColor3 = doorHighlightColor
             distanceLabel.Name = "Dist"
-            distanceLabel.Text = "Calculating..."
-            distanceLabel.Parent = bb
         end
 
-        -- Immediately update distance
-        updateDistanceLabel(doorPart)
+        -- Update distance text dynamically
+        local bb = door:FindFirstChild("BillBoard")
+        local distLabel = bb and bb:FindFirstChild("Dist")
+        if distLabel then
+            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+        end
     end
 end
 
-local function processObject(instance)
-    if instance:IsA("MeshPart") and highlightParts[instance.Name] then
-        addHighlight(instance, colourChosen)
-    elseif instance:IsA("Model") and highlightModels[instance.Name] then
-        addHighlight(instance, colourChosen)
-    elseif instance:IsA("Model") then
-        processDoor(instance)
-    end
-end
-
-local function updateAllDistanceLabels()
+local function updateDistanceLabels()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
     for instance, highlight in pairs(highlightedCache) do
         if instance:IsA("Model") and instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
             local door = instance.Door.Door
-            updateDistanceLabel(door)
+            local bb = door:FindFirstChild("BillBoard")
+            local distLabel = bb and bb:FindFirstChild("Dist")
+            if distLabel then
+                -- Ensure distance label is dynamically updated
+                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+            end
         end
     end
 end
 
 local function setupWorkspaceListeners()
-    -- Check for new doors dynamically
     Workspace.DescendantAdded:Connect(function(instance)
         processObject(instance)
     end)
 
-    -- Cleanup when objects are removed
     Workspace.DescendantRemoving:Connect(function(instance)
         if highlightedCache[instance] then
             highlightedCache[instance]:Destroy()
             highlightedCache[instance] = nil
-            CollectionService:RemoveTag(instance, "Highlighted")
         end
     end)
 end
 
-local function processExistingDoors()
-    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
-        processDoor(room)
-    end
-end
-
 RunService.Heartbeat:Connect(function()
-    cleanupHighlights()
-    updateAllDistanceLabels()
+    cleanupHighlights() -- Clean up invalid highlights
+    updateDistanceLabels() -- Update distance labels for doors
 end)
 
 -- Initialize
 setupWorkspaceListeners()
-processExistingDoors() -- Ensure existing doors in CurrentRooms are processed
 for _, instance in ipairs(Workspace:GetDescendants()) do
-    processObject(instance)
+    processObject(instance) -- Process existing objects
 end
