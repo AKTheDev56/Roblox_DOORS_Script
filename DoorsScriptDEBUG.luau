@@ -1,7 +1,6 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 
@@ -55,42 +54,38 @@ local function processObject(instance)
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    -- Highlight mesh parts
     if instance:IsA("MeshPart") and highlightParts[instance.Name] then
         addHighlight(instance, colourChosen)
-    -- Highlight specific models
-    elseif instance:IsA("Model") and highlightModels[instance.Name] then
-        addHighlight(instance, colourChosen)
-    -- Highlight doors and add distance labels
-    elseif instance:IsA("Model") and instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
-        local door = instance.Door.Door
-        addHighlight(door, doorHighlightColor)
 
-        -- Add distance label
-        if not door:FindFirstChild("BillBoard") then
-            local bb = Instance.new("BillboardGui", door)
-            bb.Adornee = door
-            bb.ExtentsOffset = Vector3.new(0, 1, 0)
-            bb.AlwaysOnTop = true
-            bb.Size = UDim2.new(0, 6, 0, 6)
-            bb.Name = "BillBoard"
+    elseif instance:IsA("Model") then
+        if highlightModels[instance.Name] then
+            addHighlight(instance, colourChosen)
+        elseif instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
+            local door = instance.Door.Door
+            addHighlight(door, doorHighlightColor)
 
-            local distanceLabel = Instance.new("TextLabel", bb)
-            distanceLabel.ZIndex = 10
-            distanceLabel.BackgroundTransparency = 1
-            distanceLabel.Position = UDim2.new(0, 0, 0, -15)
-            distanceLabel.Size = UDim2.new(1, 0, 10, 0)
-            distanceLabel.Font = Enum.Font.ArialBold
-            distanceLabel.TextStrokeTransparency = 0.5
-            distanceLabel.TextColor3 = doorHighlightColor
-            distanceLabel.Name = "Dist"
-        end
+            -- Check if BillboardGui exists
+            local bb = door:FindFirstChild("BillBoard")
+            if not bb then
+                bb = Instance.new("BillboardGui")
+                bb.Adornee = door
+                bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                bb.AlwaysOnTop = true
+                bb.Size = UDim2.new(0, 6, 0, 6)
+                bb.Name = "BillBoard"
+                bb.Parent = door
 
-        -- Update distance text dynamically
-        local bb = door:FindFirstChild("BillBoard")
-        local distLabel = bb and bb:FindFirstChild("Dist")
-        if distLabel then
-            distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                local distanceLabel = Instance.new("TextLabel")
+                distanceLabel.ZIndex = 10
+                distanceLabel.BackgroundTransparency = 1
+                distanceLabel.Position = UDim2.new(0, 0, 0, -15)
+                distanceLabel.Size = UDim2.new(1, 0, 10, 0)
+                distanceLabel.Font = Enum.Font.ArialBold
+                distanceLabel.TextStrokeTransparency = 0.5
+                distanceLabel.TextColor3 = doorHighlightColor
+                distanceLabel.Name = "Dist"
+                distanceLabel.Parent = bb
+            end
         end
     end
 end
@@ -100,22 +95,21 @@ local function updateDistanceLabels()
     if not playerPrimaryPart then return end
 
     for instance, highlight in pairs(highlightedCache) do
-        if instance:IsA("Model") and instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
-            local door = instance.Door.Door
-            local bb = door:FindFirstChild("BillBoard")
-            local distLabel = bb and bb:FindFirstChild("Dist")
-            if distLabel then
-                -- Ensure distance label is dynamically updated
-                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+        if instance:IsA("MeshPart") or instance:IsA("Model") then
+            if instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
+                local door = instance.Door.Door
+                local bb = door:FindFirstChild("BillBoard")
+                local distLabel = bb and bb:FindFirstChild("Dist")
+                if distLabel then
+                    distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                end
             end
         end
     end
 end
 
 local function setupWorkspaceListeners()
-    Workspace.DescendantAdded:Connect(function(instance)
-        processObject(instance)
-    end)
+    Workspace.DescendantAdded:Connect(processObject)
 
     Workspace.DescendantRemoving:Connect(function(instance)
         if highlightedCache[instance] then
@@ -126,12 +120,12 @@ local function setupWorkspaceListeners()
 end
 
 RunService.Heartbeat:Connect(function()
-    cleanupHighlights() -- Clean up invalid highlights
-    updateDistanceLabels() -- Update distance labels for doors
+    cleanupHighlights()
+    updateDistanceLabels()
 end)
 
 -- Initialize
 setupWorkspaceListeners()
 for _, instance in ipairs(Workspace:GetDescendants()) do
-    processObject(instance) -- Process existing objects
+    processObject(instance)
 end
