@@ -16,9 +16,9 @@ local doorHighlightColor = colourTable.Yellow
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
 local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
--- Cache for performance
+-- Caches for performance
 local highlightedCache = {}
-local doorCache = {}  -- New cache for doors
+local doorCache = {}
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -62,49 +62,50 @@ local function updateDistanceLabel(door)
     end
 end
 
-local function processObject(instance)
-    local playerPrimaryPart = getPlayerPrimaryPart()
-    if not playerPrimaryPart then return end
+local function processDoor(instance)
+    if doorCache[instance] then return end  -- Prevent duplicate processing
 
+    local door = instance:FindFirstChild("Door")
+    if door and door:FindFirstChild("Door") then
+        local doorPart = door.Door
+        addHighlight(doorPart, doorHighlightColor)
+        doorCache[doorPart] = true
+
+        -- Add distance label if not already present
+        if not doorPart:FindFirstChild("BillBoard") then
+            local bb = Instance.new("BillboardGui")
+            bb.Adornee = doorPart
+            bb.ExtentsOffset = Vector3.new(0, 1, 0)
+            bb.AlwaysOnTop = true
+            bb.Size = UDim2.new(0, 6, 0, 6)
+            bb.Name = "BillBoard"
+            bb.Parent = doorPart
+
+            local distanceLabel = Instance.new("TextLabel")
+            distanceLabel.ZIndex = 10
+            distanceLabel.BackgroundTransparency = 1
+            distanceLabel.Position = UDim2.new(0, 0, 0, -15)
+            distanceLabel.Size = UDim2.new(1, 0, 10, 0)
+            distanceLabel.Font = Enum.Font.ArialBold
+            distanceLabel.TextStrokeTransparency = 0.5
+            distanceLabel.TextColor3 = doorHighlightColor
+            distanceLabel.Name = "Dist"
+            distanceLabel.Text = "..."  -- Temporary placeholder
+            distanceLabel.Parent = bb
+        end
+
+        -- Immediately update distance label
+        updateDistanceLabel(doorPart)
+    end
+end
+
+local function processObject(instance)
     if instance:IsA("MeshPart") and highlightParts[instance.Name] then
         addHighlight(instance, colourChosen)
-
+    elseif instance:IsA("Model") and highlightModels[instance.Name] then
+        addHighlight(instance, colourChosen)
     elseif instance:IsA("Model") then
-        if highlightModels[instance.Name] then
-            addHighlight(instance, colourChosen)
-
-        elseif instance:FindFirstChild("Door") and instance.Door:FindFirstChild("Door") then
-            local door = instance.Door.Door
-            addHighlight(door, doorHighlightColor)
-            doorCache[door] = true  -- Cache the door for distance updates
-
-            -- Check if BillboardGui exists
-            local bb = door:FindFirstChild("BillBoard")
-            if not bb then
-                bb = Instance.new("BillboardGui")
-                bb.Adornee = door
-                bb.ExtentsOffset = Vector3.new(0, 1, 0)
-                bb.AlwaysOnTop = true
-                bb.Size = UDim2.new(0, 6, 0, 6)
-                bb.Name = "BillBoard"
-                bb.Parent = door
-
-                local distanceLabel = Instance.new("TextLabel")
-                distanceLabel.ZIndex = 10
-                distanceLabel.BackgroundTransparency = 1
-                distanceLabel.Position = UDim2.new(0, 0, 0, -15)
-                distanceLabel.Size = UDim2.new(1, 0, 10, 0)
-                distanceLabel.Font = Enum.Font.ArialBold
-                distanceLabel.TextStrokeTransparency = 0.5
-                distanceLabel.TextColor3 = doorHighlightColor
-                distanceLabel.Name = "Dist"
-                distanceLabel.Text = "..."  -- Placeholder to ensure it's not "Label"
-                distanceLabel.Parent = bb
-            end
-
-            -- **Immediate update of distance label**
-            updateDistanceLabel(door)
-        end
+        processDoor(instance)
     end
 end
 
@@ -134,7 +135,7 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
-    updateAllDistanceLabels() -- Ensures all doors update distance dynamically
+    updateAllDistanceLabels()
 end)
 
 -- Initialize
