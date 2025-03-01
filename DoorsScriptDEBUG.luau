@@ -1,7 +1,7 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService") -- NEW for efficient highlights
+local CollectionService = game:GetService("CollectionService") 
 
 local player = Players.LocalPlayer
 
@@ -32,8 +32,7 @@ end
 
 local function addHighlight(instance, color)
     if not highlightedCache[instance] then
-        -- Use CollectionService for efficient tag-based highlights
-        CollectionService:AddTag(instance, "Highlighted")
+        CollectionService:AddTag(instance, "Highlighted") -- Prevent reprocessing
         
         local highlight = Instance.new("Highlight")
         highlight.Adornee = instance
@@ -73,6 +72,8 @@ local function processDoor(instance)
     local door = instance:FindFirstChild("Door")
     if door and door:FindFirstChild("Door") then
         local doorPart = door.Door
+        if CollectionService:HasTag(doorPart, "ProcessedDoor") then return end
+
         CollectionService:AddTag(doorPart, "ProcessedDoor") -- Mark as processed
 
         -- Add highlight
@@ -130,10 +131,12 @@ local function updateAllDistanceLabels()
 end
 
 local function setupWorkspaceListeners()
+    -- Check for new doors dynamically
     Workspace.DescendantAdded:Connect(function(instance)
         processObject(instance)
     end)
 
+    -- Cleanup when objects are removed
     Workspace.DescendantRemoving:Connect(function(instance)
         if highlightedCache[instance] then
             highlightedCache[instance]:Destroy()
@@ -143,6 +146,12 @@ local function setupWorkspaceListeners()
     end)
 end
 
+local function processExistingDoors()
+    for _, room in pairs(Workspace.CurrentRooms:GetChildren()) do
+        processDoor(room)
+    end
+end
+
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
     updateAllDistanceLabels()
@@ -150,6 +159,7 @@ end)
 
 -- Initialize
 setupWorkspaceListeners()
+processExistingDoors() -- Ensure existing doors in CurrentRooms are processed
 for _, instance in ipairs(Workspace:GetDescendants()) do
     processObject(instance)
 end
