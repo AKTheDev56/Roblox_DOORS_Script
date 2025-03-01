@@ -15,7 +15,7 @@ local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true }
+local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
 -- Cache to prevent duplicate highlights
 local highlightedCache = {}
@@ -60,6 +60,7 @@ local function processDoors()
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
             if not highlightedDoors[door] then
+                -- Ensure highlight is added first
                 addHighlight(door, doorHighlightColor)
                 highlightedDoors[door] = true
             end
