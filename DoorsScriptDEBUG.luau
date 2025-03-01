@@ -13,15 +13,12 @@ local colourTable = {
 local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
--- Highlight targets (these are the models/parts to search for and highlight)
+-- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
+local highlightModels = { LeverForGate = true, LiveHintBook = true }
 
 -- Cache for performance
 local highlightedCache = {}
-
--- Directory for models/parts to search
-local currentRooms = Workspace:WaitForChild("CurrentRooms")
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -47,7 +44,7 @@ end
 
 local function cleanupHighlights()
     for instance, highlight in pairs(highlightedCache) do
-        if not instance:IsDescendantOf(currentRooms) or not instance.Parent then
+        if not instance:IsDescendantOf(Workspace.CurrentRooms) or not instance.Parent then
             highlight:Destroy()
             highlightedCache[instance] = nil
         end
@@ -59,7 +56,7 @@ local function processWorkspace()
     if not playerPrimaryPart then return end
 
     -- Search for doors in CurrentRooms
-    for _, child in ipairs(currentRooms:GetDescendants()) do
+    for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
         if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
             local door = child.Door.Door
             addHighlight(door, doorHighlightColor)
@@ -98,6 +95,22 @@ local function processWorkspace()
             end
         elseif child:IsA("Model") and highlightModels[child.Name] then
             addHighlight(child, colourChosen)
+        end
+    end
+
+    -- Check for FigureRig in CurrentRooms.50 and wait for it if not found
+    local figureRigDirectory = Workspace.CurrentRooms:FindFirstChild("50")
+    if figureRigDirectory then
+        local figureRig = figureRigDirectory:FindFirstChild("FigureRig")
+        if figureRig then
+            addHighlight(figureRig, colourChosen)
+        else
+            -- Wait for FigureRig to exist in 50
+            figureRigDirectory.ChildAdded:Wait()
+            local newFigureRig = figureRigDirectory:FindFirstChild("FigureRig")
+            if newFigureRig then
+                addHighlight(newFigureRig, colourChosen)
+            end
         end
     end
 end
