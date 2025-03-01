@@ -11,7 +11,6 @@ local colourTable = {
     Green = Color3.fromRGB(0, 255, 0)
 }
 local colourChosen = colourTable.Green
-local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
@@ -51,18 +50,30 @@ local function cleanupHighlights()
     end
 end
 
-local function processWorkspace()
-    local playerPrimaryPart = getPlayerPrimaryPart()
-    if not playerPrimaryPart then return end
-
+local function highlightKeyRingTagParts()
     for _, child in ipairs(Workspace:GetDescendants()) do
-        -- Highlight doors
-        if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
-            local door = child.Door.Door
-            addHighlight(door, doorHighlightColor)
+        -- Highlight mesh parts like Key, Inset, Ring, and Tag
+        if child:IsA("MeshPart") and highlightParts[child.Name] then
+            addHighlight(child, colourChosen)
+        -- Highlight specific models like LeverForGate, LiveHintBook, and FigureRig
+        elseif child:IsA("Model") and highlightModels[child.Name] then
+            addHighlight(child, colourChosen)
+        end
+    end
+end
 
-            -- Add or update distance label
-            if not door:FindFirstChild("BillBoard") then
+spawn(function()
+    while wait(0.04) do
+        for _, room in ipairs(Workspace.CurrentRooms:GetChildren()) do
+            if room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") and not room.Door.Door:FindFirstChild("Highlight") then
+                local door = room.Door.Door
+
+                -- Add highlight to the door
+                local hg = Instance.new("Highlight", door)
+                hg.FillColor = Color3.fromRGB(241, 196, 15)
+                hg.FillTransparency = 0.5
+
+                -- Add BillboardGui for distance labels
                 local bb = Instance.new("BillboardGui", door)
                 bb.Adornee = door
                 bb.ExtentsOffset = Vector3.new(0, 1, 0)
@@ -70,51 +81,35 @@ local function processWorkspace()
                 bb.Size = UDim2.new(0, 6, 0, 6)
                 bb.Name = "BillBoard"
 
-                local distanceLabel = Instance.new("TextLabel", bb)
-                distanceLabel.ZIndex = 10
-                distanceLabel.BackgroundTransparency = 1
-                distanceLabel.Position = UDim2.new(0, 0, 0, -15)
-                distanceLabel.Size = UDim2.new(1, 0, 10, 0)
-                distanceLabel.Font = Enum.Font.ArialBold
-                distanceLabel.TextStrokeTransparency = 0.5
-                distanceLabel.TextColor3 = doorHighlightColor
-                distanceLabel.Name = "Dist"
+                local txtlbl = Instance.new("TextLabel", bb)
+                txtlbl.ZIndex = 10
+                txtlbl.BackgroundTransparency = 1
+                txtlbl.Position = UDim2.new(0, 0, 0, -15)
+                txtlbl.Size = UDim2.new(1, 0, 10, 0)
+                txtlbl.Font = Enum.Font.ArialBold
+                txtlbl.FontSize = "Size12"
+                txtlbl.TextStrokeTransparency = 0.5
+                txtlbl.TextColor3 = Color3.fromRGB(241, 196, 15)
+                txtlbl.Name = "Dist"
+                txtlbl.Text = "? Studs"
             end
 
-            local bb = door:FindFirstChild("BillBoard")
-            local distLabel = bb and bb:FindFirstChild("Dist")
-            if distLabel then
-                distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+            -- Update distance dynamically
+            if room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") and room.Door.Door:FindFirstChild("BillBoard") then
+                local door = room.Door.Door
+                local distLabel = door.BillBoard:FindFirstChild("Dist")
+                if distLabel then
+                    local playerPrimaryPart = getPlayerPrimaryPart()
+                    if playerPrimaryPart then
+                        distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                    end
+                end
             end
-        end
-
-        -- Highlight mesh parts and models
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            addHighlight(child, colourChosen)
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
         end
     end
-end
-
-local function setupWorkspaceListeners()
-    Workspace.ChildAdded:Connect(function(child)
-        if child:IsA("Model") then
-            if child.Name == "RushMoving" then
-                StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
-            elseif child.Name == "AmbushMoving" then
-                StarterGui:SetCore("SendNotification", { Title = "AMBUSH", Text = "HIDE", Duration = 5 })
-            elseif child.Name == "Eyes" then
-                StarterGui:SetCore("SendNotification", { Title = "EYES", Text = "LOOK AWAY", Duration = 5 })
-            end
-        end
-    end)
-end
+end)
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights() -- Clean up invalid highlights
-    processWorkspace() -- Process all doors, mesh parts, and models dynamically
+    highlightKeyRingTagParts() -- Highlight Key, Inset, Ring, Tag, and models
 end)
-
-setupWorkspaceListeners()
-processWorkspace()
