@@ -19,12 +19,7 @@ local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = 
 
 -- Cache for performance
 local highlightedCache = {}
-
--- Flags to track highlighted parts/models
-local highlightedKeys = false
-local highlightedLeverForGate = false
-local highlightedLiveHintBook = false
-local figureRigHighlighted = false
+local figureRigHighlighted = false -- To track if FigureRig has been highlighted
 
 local function getPlayerPrimaryPart()
     local character = player.Character
@@ -96,37 +91,30 @@ local function processWorkspace()
 
         -- Highlight mesh parts and models in CurrentRooms
         if child:IsA("MeshPart") then
-            -- Ensure only the specified parts are highlighted once
-            if highlightParts[child.Name] and not highlightedKeys then
+            if highlightParts[child.Name] and not highlightedCache[child] then
                 addHighlight(child, colourChosen)
-                highlightedKeys = true -- Prevent future highlighting of Key, Inset, Ring, and Tag
             end
         elseif child:IsA("Model") then
-            -- Ensure only LeverForGate and LiveHintBook are highlighted once
-            if child.Name == "LeverForGate" and not highlightedLeverForGate then
+            if highlightModels[child.Name] and not highlightedCache[child] then
                 addHighlight(child, colourChosen)
-                highlightedLeverForGate = true
-            elseif child.Name == "LiveHintBook" and not highlightedLiveHintBook then
-                addHighlight(child, colourChosen)
-                highlightedLiveHintBook = true
             end
         end
     end
-end
 
-local function setupWorkspaceListeners()
-    -- Check for specific models (RushMoving, AmbushMoving, Eyes) in Workspace
-    Workspace.ChildAdded:Connect(function(child)
-        if child:IsA("Model") then
-            if child.Name == "RushMoving" then
-                StarterGui:SetCore("SendNotification", { Title = "RUSH", Text = "HIDE", Duration = 5 })
-            elseif child.Name == "AmbushMoving" then
-                StarterGui:SetCore("SendNotification", { Title = "AMBUSH", Text = "HIDE", Duration = 5 })
-            elseif child.Name == "Eyes" then
-                StarterGui:SetCore("SendNotification", { Title = "EYES", Text = "LOOK AWAY", Duration = 5 })
+    -- Check for FigureRig in workspace.CurrentRooms.50, and wait if it doesn't exist
+    if not figureRigHighlighted then
+        local figureRigFolder = Workspace.CurrentRooms:FindFirstChild("50")
+        if figureRigFolder then
+            local figureRig = figureRigFolder:FindFirstChild("FigureRig")
+            if figureRig then
+                addHighlight(figureRig, colourChosen)
+                figureRigHighlighted = true -- Ensure we don't highlight again
             end
+        else
+            -- Wait for the folder to exist
+            Workspace.CurrentRooms.ChildAdded:Wait()
         end
-    end)
+    end
 end
 
 RunService.Heartbeat:Connect(function()
@@ -134,5 +122,4 @@ RunService.Heartbeat:Connect(function()
     processWorkspace() -- Process all doors, mesh parts, and models dynamically in CurrentRooms
 end)
 
-setupWorkspaceListeners()
 processWorkspace()
