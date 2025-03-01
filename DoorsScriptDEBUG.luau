@@ -51,48 +51,59 @@ local function cleanupHighlights()
     end
 end
 
-local function processWorkspace()
+local function highlightPartsAndModels()
+    -- Iterate through Workspace descendants in real-time
+    for _, child in ipairs(Workspace:GetDescendants()) do
+        -- Highlight mesh parts like Key, Inset, Ring, and Tag
+        if child:IsA("MeshPart") and highlightParts[child.Name] then
+            addHighlight(child, colourChosen)
+        -- Highlight specific models like LeverForGate, LiveHintBook, and FigureRig
+        elseif child:IsA("Model") and highlightModels[child.Name] then
+            addHighlight(child, colourChosen)
+        end
+    end
+end
+
+local function highlightDoors()
+    local currentRoomsFolder = Workspace:FindFirstChild("CurrentRooms")
+    if not currentRoomsFolder then return end
+
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for _, child in ipairs(Workspace:GetDescendants()) do
-        -- Highlight doors
-        if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
-            local door = child.Door.Door
-            addHighlight(door, doorHighlightColor)
+    for _, room in ipairs(currentRoomsFolder:GetChildren()) do
+        if room:IsA("Model") and room:FindFirstChild("Door") and room.Door:FindFirstChild("Door") then
+            local door = room.Door.Door
+            if not highlightedCache[door] then
+                addHighlight(door, doorHighlightColor)
 
-            -- Add or update distance label
-            if not door:FindFirstChild("BillBoard") then
-                local bb = Instance.new("BillboardGui", door)
-                bb.Adornee = door
-                bb.ExtentsOffset = Vector3.new(0, 1, 0)
-                bb.AlwaysOnTop = true
-                bb.Size = UDim2.new(0, 6, 0, 6)
-                bb.Name = "BillBoard"
+                -- Add a distance label only once
+                if not door:FindFirstChild("BillBoard") then
+                    local bb = Instance.new("BillboardGui", door)
+                    bb.Adornee = door
+                    bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Size = UDim2.new(0, 6, 0, 6)
+                    bb.Name = "BillBoard"
 
-                local distanceLabel = Instance.new("TextLabel", bb)
-                distanceLabel.ZIndex = 10
-                distanceLabel.BackgroundTransparency = 1
-                distanceLabel.Position = UDim2.new(0, 0, 0, -15)
-                distanceLabel.Size = UDim2.new(1, 0, 10, 0)
-                distanceLabel.Font = Enum.Font.ArialBold
-                distanceLabel.TextStrokeTransparency = 0.5
-                distanceLabel.TextColor3 = doorHighlightColor
-                distanceLabel.Name = "Dist"
+                    local distanceLabel = Instance.new("TextLabel", bb)
+                    distanceLabel.ZIndex = 10
+                    distanceLabel.BackgroundTransparency = 1
+                    distanceLabel.Position = UDim2.new(0, 0, 0, -15)
+                    distanceLabel.Size = UDim2.new(1, 0, 10, 0)
+                    distanceLabel.Font = Enum.Font.ArialBold
+                    distanceLabel.TextStrokeTransparency = 0.5
+                    distanceLabel.TextColor3 = doorHighlightColor
+                    distanceLabel.Name = "Dist"
+                end
             end
 
+            -- Update distance label dynamically
             local bb = door:FindFirstChild("BillBoard")
             local distLabel = bb and bb:FindFirstChild("Dist")
             if distLabel then
                 distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
             end
-        end
-
-        -- Highlight mesh parts and models
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            addHighlight(child, colourChosen)
-        elseif child:IsA("Model") and highlightModels[child.Name] then
-            addHighlight(child, colourChosen)
         end
     end
 end
@@ -113,8 +124,10 @@ end
 
 RunService.Heartbeat:Connect(function()
     cleanupHighlights() -- Clean up invalid highlights
-    processWorkspace() -- Process all doors, mesh parts, and models dynamically
+    highlightPartsAndModels() -- Highlight specific mesh parts and models dynamically
+    highlightDoors() -- Highlight doors and update their distances
 end)
 
 setupWorkspaceListeners()
-processWorkspace()
+highlightPartsAndModels()
+highlightDoors()
