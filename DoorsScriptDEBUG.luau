@@ -14,8 +14,7 @@ local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
-local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
-local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
+local highlightModels = { KeyObtain = true, LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
 -- Cache to prevent duplicate highlights
 local highlightedCache = {}
@@ -86,9 +85,7 @@ end
 
 local function processExistingObjects()
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
-        if child:IsA("MeshPart") and highlightParts[child.Name] then
-            addHighlight(child, colourChosen)
-        elseif child:IsA("Model") and highlightModels[child.Name] then
+        if child:IsA("Model") and highlightModels[child.Name] then
             addHighlight(child, colourChosen)
         end
     end
@@ -99,9 +96,7 @@ local function trackNewInstances()
         task.wait(0.2) -- Slight delay to ensure it's fully parented
 
         for _, descendant in ipairs(newChild:GetDescendants()) do
-            if descendant:IsA("MeshPart") and highlightParts[descendant.Name] then
-                addHighlight(descendant, colourChosen)
-            elseif descendant:IsA("Model") and highlightModels[descendant.Name] then
+            if descendant:IsA("Model") and highlightModels[descendant.Name] then
                 addHighlight(descendant, colourChosen)
             elseif descendant:IsA("Model") and descendant:FindFirstChild("Door") and descendant.Door:FindFirstChild("Door") then
                 addHighlight(descendant.Door.Door, doorHighlightColor)
