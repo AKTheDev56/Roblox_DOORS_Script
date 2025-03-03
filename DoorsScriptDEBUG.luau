@@ -14,7 +14,14 @@ local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
 -- Highlight targets
-local highlightModels = { KeyObtain = true, LeverForGate = true, LiveHintBook = true, FigureRig = true }
+local highlightModels = { 
+    KeyObtain = true, 
+    LeverForGate = true, 
+    LiveHintBook = true, 
+    FigureRig = true, 
+    LiveBreakerPolePickup = true,
+    Snare = true -- Added Snare
+}
 
 -- Cache to prevent duplicate highlights
 local highlightedCache = {}
