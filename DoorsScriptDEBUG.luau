@@ -5,6 +5,7 @@ local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 
+-- Predefined colors
 local colourTable = {
     Yellow = Color3.fromRGB(241, 196, 15),
     Green = Color3.fromRGB(0, 255, 0)
@@ -12,21 +13,26 @@ local colourTable = {
 local colourChosen = colourTable.Green
 local doorHighlightColor = colourTable.Yellow
 
+-- Highlight targets
 local highlightParts = { Key = true, Inset = true, Ring = true, Tag = true }
 local highlightModels = { LeverForGate = true, LiveHintBook = true, FigureRig = true }
 
+-- Cache to prevent duplicate highlights
 local highlightedCache = {}
-local highlightedDoors = {}
-local taskQueue = {} -- Queue for thread pooling
-local workerThreads = {} -- Pool of worker threads
+local highlightQueue = {} -- Queue for objects that failed to highlight initially
 
 local function getPlayerPrimaryPart()
     local character = player.Character
     return character and character.PrimaryPart
 end
 
+local function round(number, decimals)
+    local power = 10 ^ decimals
+    return math.floor(number * power) / power
+end
+
 local function addHighlight(instance, color)
-    if not highlightedCache[instance] and instance.Parent then
+    if not highlightedCache[instance] then
         local highlight = Instance.new("Highlight")
         highlight.Adornee = instance
         highlight.Parent = instance
@@ -34,7 +40,9 @@ local function addHighlight(instance, color)
         highlight.OutlineColor = Color3.new(1, 1, 1)
         highlight.FillTransparency = 0.5
         highlightedCache[instance] = highlight
+        return true -- Successfully highlighted
     end
+    return false -- Already highlighted
 end
 
 local function cleanupHighlights()
@@ -50,89 +58,70 @@ local function processDoors()
     local playerPrimaryPart = getPlayerPrimaryPart()
     if not playerPrimaryPart then return end
 
-    for _, child in ipairs(Workspace.CurrentRooms:GetChildren()) do
-        local doorModel = child:FindFirstChild("Door")
-        if doorModel and doorModel:FindFirstChild("Door") then
-            local door = doorModel.Door
-            if not highlightedDoors[door] then
-                addHighlight(door, doorHighlightColor)
-                highlightedDoors[door] = true
+    for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
+        if child:IsA("Model") and child:FindFirstChild("Door") and child.Door:FindFirstChild("Door") then
+            local door = child.Door.Door
+            if addHighlight(door, doorHighlightColor) then
+                -- Ensure Billboard GUI exists
+                local bb = door:FindFirstChild("BillBoard")
+                if not bb then
+                    bb = Instance.new("BillboardGui", door)
+                    bb.Adornee = door
+                    bb.ExtentsOffset = Vector3.new(0, 1, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Size = UDim2.new(0, 6, 0, 6)
+                    bb.Name = "BillBoard"
+                end
+
+                local distLabel = bb:FindFirstChild("Dist")
+                if not distLabel then
+                    distLabel = Instance.new("TextLabel", bb)
+                    distLabel.ZIndex = 10
+                    distLabel.BackgroundTransparency = 1
+                    distLabel.Position = UDim2.new(0, 0, 0, -15)
+                    distLabel.Size = UDim2.new(1, 0, 10, 0)
+                    distLabel.Font = Enum.Font.ArialBold
+                    distLabel.TextStrokeTransparency = 0.5
+                    distLabel.TextColor3 = doorHighlightColor
+                    distLabel.Name = "Dist"
+                end
             end
 
+            -- Update distance label
             local bb = door:FindFirstChild("BillBoard")
-            if not bb then
-                bb = Instance.new("BillboardGui")
-                bb.Adornee = door
-                bb.ExtentsOffset = Vector3.new(0, 1, 0)
-                bb.AlwaysOnTop = true
-                bb.Size = UDim2.new(0, 6, 0, 6)
-                bb.Name = "BillBoard"
-                bb.Parent = door
+            if bb then
+                local distLabel = bb:FindFirstChild("Dist")
+                if distLabel then
+                    distLabel.Text = round((playerPrimaryPart.Position - door.Position).magnitude, 1) .. " Studs"
+                end
             end
-
-            local distLabel = bb:FindFirstChild("Dist")
-            if not distLabel then
-                distLabel = Instance.new("TextLabel")
-                distLabel.ZIndex = 10
-                distLabel.BackgroundTransparency = 1
-                distLabel.Position = UDim2.new(0, 0, 0, -15)
-                distLabel.Size = UDim2.new(1, 0, 10, 0)
-                distLabel.Font = Enum.Font.ArialBold
-                distLabel.TextStrokeTransparency = 0.5
-                distLabel.TextColor3 = doorHighlightColor
-                distLabel.Name = "Dist"
-                distLabel.Parent = bb
-            end
-
-            distLabel.Text = string.format("%.1f Studs", (playerPrimaryPart.Position - door.Position).magnitude)
         end
     end
 end
 
 local function processExistingObjects()
     for _, child in ipairs(Workspace.CurrentRooms:GetDescendants()) do
-        if highlightParts[child.Name] and child:IsA("MeshPart") then
-            addHighlight(child, colourChosen)
-        elseif highlightModels[child.Name] and child:IsA("Model") then
-            addHighlight(child, colourChosen)
+        if (child:IsA("MeshPart") and highlightParts[child.Name]) or 
+           (child:IsA("Model") and highlightModels[child.Name]) then
+            if not addHighlight(child, colourChosen) then
+                table.insert(highlightQueue, {instance = child, color = colourChosen})
+            end
         end
-    end
-end
-
-local function addToQueue(taskFunc)
-    table.insert(taskQueue, taskFunc)
-end
-
-local function workerThread()
-    while true do
-        if #taskQueue > 0 then
-            local taskFunc = table.remove(taskQueue, 1)
-            pcall(taskFunc)
-        end
-        task.wait() -- Prevents infinite loop hogging CPU
-    end
-end
-
-local function setupWorkers(workerCount)
-    for i = 1, workerCount do
-        task.spawn(workerThread)
     end
 end
 
 local function trackNewInstances()
     Workspace.CurrentRooms.ChildAdded:Connect(function(newChild)
-        task.wait(0.2) -- Ensure it is fully parented before checking
-
+        task.wait(0.2) -- Ensure object is fully loaded
         for _, descendant in ipairs(newChild:GetDescendants()) do
-            addToQueue(function()
-                if highlightParts[descendant.Name] and descendant:IsA("MeshPart") then
-                    addHighlight(descendant, colourChosen)
-                elseif highlightModels[descendant.Name] and descendant:IsA("Model") then
-                    addHighlight(descendant, colourChosen)
-                elseif descendant:IsA("Model") and descendant:FindFirstChild("Door") and descendant.Door:FindFirstChild("Door") then
-                    addHighlight(descendant.Door.Door, doorHighlightColor)
+            if (descendant:IsA("MeshPart") and highlightParts[descendant.Name]) or 
+               (descendant:IsA("Model") and highlightModels[descendant.Name]) then
+                if not addHighlight(descendant, colourChosen) then
+                    table.insert(highlightQueue, {instance = descendant, color = colourChosen})
                 end
-            end)
+            elseif descendant:IsA("Model") and descendant:FindFirstChild("Door") and descendant.Door:FindFirstChild("Door") then
+                addHighlight(descendant.Door.Door, doorHighlightColor)
+            end
         end
     end)
 end
@@ -144,13 +133,11 @@ local function trackFigureRig()
             if figureRigContainer then
                 local figureRig = figureRigContainer:FindFirstChild("FigureRig")
                 if figureRig and not highlightedCache[figureRig] then
-                    addToQueue(function()
-                        addHighlight(figureRig, colourChosen)
-                    end)
+                    addHighlight(figureRig, colourChosen)
                     break -- Stop checking once highlighted
                 end
             end
-            task.wait(1)
+            task.wait(1) -- Check every second to reduce lag
         end
     end)
 end
@@ -158,26 +145,37 @@ end
 local function setupWorkspaceListeners()
     Workspace.ChildAdded:Connect(function(child)
         if child:IsA("Model") then
-            local notifications = {
-                RushMoving = { Title = "RUSH", Text = "HIDE", Duration = 5 },
-                AmbushMoving = { Title = "AMBUSH", Text = "HIDE", Duration = 5 },
-                Eyes = { Title = "EYES", Text = "LOOK AWAY", Duration = 5 }
+            local alerts = {
+                ["RushMoving"] = {Title = "RUSH", Text = "HIDE"},
+                ["AmbushMoving"] = {Title = "AMBUSH", Text = "HIDE"},
+                ["Eyes"] = {Title = "EYES", Text = "LOOK AWAY"}
             }
-            local notification = notifications[child.Name]
-            if notification then
-                StarterGui:SetCore("SendNotification", notification)
+            if alerts[child.Name] then
+                StarterGui:SetCore("SendNotification", {Title = alerts[child.Name].Title, Text = alerts[child.Name].Text, Duration = 5})
             end
         end
     end)
 end
 
-setupWorkers(4) -- Creates 4 worker threads
 RunService.Heartbeat:Connect(function()
     cleanupHighlights()
     processDoors()
+
+    -- Retry highlighting objects that failed before
+    for i = #highlightQueue, 1, -1 do
+        local obj = highlightQueue[i]
+        if obj.instance and obj.instance.Parent then
+            if addHighlight(obj.instance, obj.color) then
+                table.remove(highlightQueue, i) -- Remove from queue once highlighted
+            end
+        else
+            table.remove(highlightQueue, i) -- Remove invalid objects
+        end
+    end
 end)
 
 setupWorkspaceListeners()
 trackNewInstances()
 trackFigureRig()
-task.defer(processExistingObjects)
+processDoors()
+processExistingObjects()
